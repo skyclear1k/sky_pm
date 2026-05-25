@@ -8,7 +8,7 @@ python -c "import flask" 2>nul || (
 )
 
 echo.
-echo  My PLM starting at http://127.0.0.1:5000
+echo  Sky Action starting at http://127.0.0.1:5000
 echo  Press Ctrl+C to stop.
 echo.
 start "" http://127.0.0.1:5000

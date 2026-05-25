@@ -67,7 +67,7 @@ def already_imported(conn: sqlite3.Connection, orig_name: str) -> bool:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Bulk-import drawings into My PLM")
+    parser = argparse.ArgumentParser(description="Bulk-import drawings into Sky Action")
     parser.add_argument("--src",     default=str(DEFAULT_SRC),
                         help="Folder containing files to import")
     parser.add_argument("--dry-run", action="store_true",
