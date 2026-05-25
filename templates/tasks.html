@@ -67,10 +67,10 @@
       <tr class="bg-gray-50 border-b border-gray-200 text-left">
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-8"></th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Title</th>
-        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Priority</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-32">Priority</th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Status</th>
-        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Start</th>
-        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Finish</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-28">Start</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-28">Finish</th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-36">Related</th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-32">Actions</th>
       </tr>
@@ -131,7 +131,26 @@
           </div>
         </td>
 
-        <td class="px-4 py-3 w-28">{{ t.priority | priority_badge }}</td>
+        <!-- Inline priority dropdown -->
+        <td class="px-4 py-3">
+          <form action="{{ url_for('task_priority', id=t.id) }}" method="post">
+            <select name="priority" onchange="this.form.submit()"
+                    class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer
+                           {% if 'Critical' in t.priority %}text-red-700
+                           {% elif 'High' in t.priority %}text-orange-600
+                           {% elif 'Medium' in t.priority %}text-blue-700
+                           {% else %}text-gray-500{% endif %}">
+              {% for level in ['Critical','High','Medium','Low'] %}
+                <optgroup label="{{ level }}">
+                  {% for n in ['T1','T2','T3'] %}
+                    {% set p = level ~ ' ' ~ n %}
+                    <option value="{{ p }}" {% if t.priority == p %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
 
         <!-- Inline status dropdown -->
         <td class="px-4 py-3">
@@ -147,18 +166,20 @@
         </td>
 
         <!-- Start date -->
-        <td class="px-4 py-3 text-xs text-gray-500">
-          {% if t.start_date %}{{ t.start_date }}{% else %}<span class="text-gray-300">—</span>{% endif %}
+        <td class="px-4 py-3">
+          <input type="date" value="{{ t.start_date or '' }}"
+                 class="text-xs text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white w-28
+                        focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer"
+                 onchange="patchDate({{ t.id }}, 'start_date', this.value)">
         </td>
 
         <!-- Finish date -->
-        <td class="px-4 py-3 text-xs {% if t.finish_date and t.finish_date < now and t.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
-          {% if t.finish_date %}
-            {{ t.finish_date }}
-            {% if t.finish_date < now and t.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
-          {% else %}
-            <span class="text-gray-300">—</span>
-          {% endif %}
+        <td class="px-4 py-3">
+          <input type="date" value="{{ t.finish_date or '' }}"
+                 class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white w-28
+                        focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer
+                        {% if t.finish_date and t.finish_date < now and t.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}"
+                 onchange="patchDate({{ t.id }}, 'finish_date', this.value, this)">
         </td>
 
         <!-- Related drawing/doc -->
@@ -236,7 +257,26 @@
           {% endif %}
         </td>
 
-        <td class="px-4 py-2 w-28">{{ s.priority | priority_badge }}</td>
+        <!-- Inline priority dropdown (subtask) -->
+        <td class="px-4 py-2">
+          <form action="{{ url_for('task_priority', id=s.id) }}" method="post">
+            <select name="priority" onchange="this.form.submit()"
+                    class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer
+                           {% if 'Critical' in s.priority %}text-red-700
+                           {% elif 'High' in s.priority %}text-orange-600
+                           {% elif 'Medium' in s.priority %}text-blue-700
+                           {% else %}text-gray-500{% endif %}">
+              {% for level in ['Critical','High','Medium','Low'] %}
+                <optgroup label="{{ level }}">
+                  {% for n in ['T1','T2','T3'] %}
+                    {% set p = level ~ ' ' ~ n %}
+                    <option value="{{ p }}" {% if s.priority == p %}selected{% endif %}>{{ p }}</option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
 
         <td class="px-4 py-2">
           <form action="{{ url_for('task_status', id=s.id) }}" method="post">
@@ -251,18 +291,20 @@
         </td>
 
         <!-- Start date (subtask) -->
-        <td class="px-4 py-2 text-xs text-gray-500">
-          {% if s.start_date %}{{ s.start_date }}{% else %}<span class="text-gray-300">—</span>{% endif %}
+        <td class="px-4 py-2">
+          <input type="date" value="{{ s.start_date or '' }}"
+                 class="text-xs text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white w-28
+                        focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer"
+                 onchange="patchDate({{ s.id }}, 'start_date', this.value)">
         </td>
 
         <!-- Finish date (subtask) -->
-        <td class="px-4 py-2 text-xs {% if s.finish_date and s.finish_date < now and s.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
-          {% if s.finish_date %}
-            {{ s.finish_date }}
-            {% if s.finish_date < now and s.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
-          {% else %}
-            <span class="text-gray-300">—</span>
-          {% endif %}
+        <td class="px-4 py-2">
+          <input type="date" value="{{ s.finish_date or '' }}"
+                 class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white w-28
+                        focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer
+                        {% if s.finish_date and s.finish_date < now and s.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}"
+                 onchange="patchDate({{ s.id }}, 'finish_date', this.value, this)">
         </td>
 
         <td class="px-4 py-2 text-xs">
@@ -324,6 +366,21 @@ function toggleSubs(parentId, btn) {
   rows.forEach(r => r.classList.toggle('hidden', !willOpen));
   btn.dataset.open = willOpen ? '1' : '0';
   btn.querySelector('svg').style.transform = willOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+function patchDate(id, field, value, input) {
+  fetch('/tasks/' + id + '/dates', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({[field]: value || null}),
+  });
+  if (field === 'finish_date' && input) {
+    const today = new Date().toISOString().split('T')[0];
+    const overdue = value && value < today;
+    input.classList.toggle('text-red-600',   overdue);
+    input.classList.toggle('font-semibold',  overdue);
+    input.classList.toggle('text-gray-500', !overdue);
+  }
 }
 </script>
 

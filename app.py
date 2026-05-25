@@ -848,15 +848,30 @@ def gantt():
     return render_template('gantt.html', tasks=tasks, project_filter=pj_name, undated=undated)
 
 
+@app.route('/tasks/<int:id>/priority', methods=['POST'])
+def task_priority(id):
+    priority = request.form.get('priority', 'Medium T2')
+    db = get_db()
+    db.execute("UPDATE tasks SET priority=?, updated_at=datetime('now','localtime') WHERE id=?",
+               (priority, id))
+    db.commit()
+    return redirect(request.referrer or url_for('tasks'))
+
+
 @app.route('/tasks/<int:id>/dates', methods=['POST'])
 def task_dates(id):
     data = request.get_json(force=True)
     db = get_db()
-    db.execute(
-        "UPDATE tasks SET start_date=?, finish_date=?, updated_at=datetime('now','localtime') WHERE id=?",
-        (data.get('start_date') or None, data.get('finish_date') or None, id)
-    )
-    db.commit()
+    sets, vals = [], []
+    if 'start_date' in data:
+        sets.append('start_date=?');  vals.append(data['start_date'] or None)
+    if 'finish_date' in data:
+        sets.append('finish_date=?'); vals.append(data['finish_date'] or None)
+    if sets:
+        sets.append("updated_at=datetime('now','localtime')")
+        vals.append(id)
+        db.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+        db.commit()
     return {'ok': True}
 
 
