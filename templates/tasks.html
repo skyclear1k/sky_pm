@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block header %}Tasks{% endblock %}
+
+{% block header_actions %}
+  <a href="{{ url_for('task_new', project_name=project_filter) }}"
+     class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+    + New Task
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<form method="get" class="flex items-center gap-3 mb-4 flex-wrap">
+  {% if project_filter %}<input type="hidden" name="project_name" value="{{ project_filter }}">{% endif %}
+  <input type="text" name="q" value="{{ q }}" placeholder="Search title or description…"
+         class="border border-gray-300 rounded px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-400">
+  <select name="priority" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <option value="">All priorities</option>
+    {% for p in ['Critical','High','Medium','Low'] %}
+      <option value="{{ p }}" {% if priority_filter == p %}selected{% endif %}>{{ p }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <option value="">All statuses</option>
+    {% for s in ['Open','In Progress','Done'] %}
+      <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="bg-gray-700 hover:bg-gray-800 text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+    Filter
+  </button>
+  {% if q or priority_filter or status_filter %}
+    <a href="{{ url_for('tasks') }}" class="text-xs text-gray-500 hover:text-gray-700">Clear</a>
+  {% endif %}
+
+  <!-- Quick status filters -->
+  <div class="ml-auto flex items-center gap-2">
+    <span class="text-xs text-gray-400">Quick:</span>
+    <a href="{{ url_for('tasks', status='Open') }}"
+       class="text-xs px-2 py-1 rounded border {% if status_filter == 'Open' %}bg-gray-700 text-white border-gray-700{% else %}border-gray-300 text-gray-600 hover:border-gray-500{% endif %}">
+      Open
+    </a>
+    <a href="{{ url_for('tasks', priority='Critical') }}"
+       class="text-xs px-2 py-1 rounded border {% if priority_filter == 'Critical' %}bg-red-600 text-white border-red-600{% else %}border-red-200 text-red-600 hover:bg-red-50{% endif %}">
+      Critical
+    </a>
+    <a href="{{ url_for('tasks', status='Done') }}"
+       class="text-xs px-2 py-1 rounded border {% if status_filter == 'Done' %}bg-green-600 text-white border-green-600{% else %}border-green-200 text-green-600 hover:bg-green-50{% endif %}">
+      Done
+    </a>
+  </div>
+</form>
+
+<!-- Task list -->
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+  {% if tasks %}
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="bg-gray-50 border-b border-gray-200 text-left">
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-8"></th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Title</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Priority</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Status</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Due</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-36">Related</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-32">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for t in tasks %}
+      <tr class="hover:bg-gray-50 transition-colors
+                 border-l-4
+                 {% if t.status == 'Done' %}opacity-60 border-gray-100
+                 {% elif t.priority == 'Critical' %}border-red-500
+                 {% elif t.priority == 'High' %}border-orange-400
+                 {% elif t.priority == 'Medium' %}border-yellow-400
+                 {% else %}border-gray-200{% endif %}">
+
+        <!-- Done checkbox -->
+        <td class="px-3 py-3">
+          <form action="{{ url_for('task_status', id=t.id) }}" method="post">
+            {% if t.status == 'Done' %}
+              <input type="hidden" name="status" value="Open">
+              <button type="submit" title="Reopen task"
+                      class="w-5 h-5 bg-green-500 border-2 border-green-500 rounded flex items-center justify-center text-white hover:bg-green-600">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            {% else %}
+              <input type="hidden" name="status" value="Done">
+              <button type="submit" title="Mark done"
+                      class="w-5 h-5 border-2 border-gray-300 rounded hover:border-green-400 hover:bg-green-50 transition-colors">
+              </button>
+            {% endif %}
+          </form>
+        </td>
+
+        <!-- Title + description -->
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-1">
+            {% if subtask_map.get(t.id, []) %}
+            <button onclick="toggleSubs({{ t.id }}, this)" data-open="0"
+                    class="flex-shrink-0 w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                    title="Expand / collapse sub-tasks">
+              <svg class="w-3 h-3" style="transform:rotate(0deg);transition:transform 0.15s" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 4.707a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L10.586 9 7.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+            {% else %}
+            <span class="w-4 flex-shrink-0"></span>
+            {% endif %}
+            <div>
+              <a href="{{ url_for('task_edit', id=t.id) }}"
+                 class="font-medium {% if t.status == 'Done' %}text-gray-400 line-through{% else %}text-gray-800 hover:text-blue-600{% endif %}">
+                {{ t.title }}
+              </a>
+              {% if t.description %}
+                <div class="text-xs text-gray-400 mt-0.5 truncate max-w-sm">{{ t.description }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </td>
+
+        <td class="px-4 py-3">{{ t.priority | priority_badge }}</td>
+
+        <!-- Inline status dropdown -->
+        <td class="px-4 py-3">
+          <form action="{{ url_for('task_status', id=t.id) }}" method="post">
+            <select name="status" onchange="this.form.submit()"
+                    class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer
+                           {% if t.status == 'Done' %}text-green-700{% elif t.status == 'In Progress' %}text-blue-700{% else %}text-gray-600{% endif %}">
+              {% for s in ['Open','In Progress','Done'] %}
+                <option value="{{ s }}" {% if t.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+
+        <!-- Due date -->
+        <td class="px-4 py-3 text-xs {% if t.due_date and t.due_date < now and t.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
+          {% if t.due_date %}
+            {{ t.due_date }}
+            {% if t.due_date < now and t.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
+          {% else %}
+            <span class="text-gray-300">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Related drawing/doc -->
+        <td class="px-4 py-3 text-xs">
+          {% if t.dwg_no %}
+            <a href="{{ url_for('drawing_edit', id=t.drawing_id) }}"
+               class="inline-flex items-center gap-1 text-slate-600 hover:text-blue-600">
+              <span class="font-mono bg-slate-100 px-1 py-0.5 rounded">{{ t.dwg_no }}</span>
+            </a>
+          {% endif %}
+          {% if t.doc_no %}
+            <a href="{{ url_for('document_edit', id=t.document_id) }}"
+               class="inline-flex items-center gap-1 text-slate-600 hover:text-blue-600 ml-1">
+              <span class="font-mono bg-slate-100 px-1 py-0.5 rounded">{{ t.doc_no }}</span>
+            </a>
+          {% endif %}
+          {% if not t.dwg_no and not t.doc_no %}
+            <span class="text-gray-300">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Actions -->
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <a href="{{ url_for('task_edit', id=t.id) }}"
+               class="text-xs text-gray-500 hover:text-blue-600 font-medium">Edit</a>
+            <form action="{{ url_for('task_delete', id=t.id) }}" method="post"
+                  onsubmit="return confirm('Delete this task and its sub-tasks?')">
+              <button type="submit" class="text-xs text-gray-400 hover:text-red-600 font-medium">Delete</button>
+            </form>
+            <a href="{{ url_for('task_new', parent_id=t.id) }}"
+               class="text-xs text-gray-400 hover:text-blue-600 font-medium" title="Add sub-task">+ Sub</a>
+          </div>
+        </td>
+
+      </tr>
+
+      {% for s in subtask_map.get(t.id, []) %}
+      <tr data-parent="{{ t.id }}"
+          class="hidden hover:bg-slate-50 transition-colors border-l-4
+                 {% if s.status == 'Done' %}opacity-50 border-gray-100
+                 {% elif s.priority == 'Critical' %}border-red-300
+                 {% elif s.priority == 'High' %}border-orange-300
+                 {% elif s.priority == 'Medium' %}border-yellow-300
+                 {% else %}border-gray-200{% endif %}
+                 bg-gray-50">
+
+        <td class="pl-7 pr-2 py-2">
+          <form action="{{ url_for('task_status', id=s.id) }}" method="post">
+            {% if s.status == 'Done' %}
+              <input type="hidden" name="status" value="Open">
+              <button type="submit" title="Reopen sub-task"
+                      class="w-4 h-4 bg-green-500 border-2 border-green-500 rounded flex items-center justify-center text-white hover:bg-green-600">
+                <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            {% else %}
+              <input type="hidden" name="status" value="Done">
+              <button type="submit" title="Mark done"
+                      class="w-4 h-4 border-2 border-gray-300 rounded hover:border-green-400 hover:bg-green-50 transition-colors">
+              </button>
+            {% endif %}
+          </form>
+        </td>
+
+        <td class="px-4 py-2 pl-8">
+          <span class="text-gray-300 mr-1 select-none">└</span>
+          <a href="{{ url_for('task_edit', id=s.id) }}"
+             class="text-sm {% if s.status == 'Done' %}text-gray-400 line-through{% else %}text-gray-700 hover:text-blue-600{% endif %}">
+            {{ s.title }}
+          </a>
+          {% if s.description %}
+            <div class="text-xs text-gray-400 mt-0.5 truncate max-w-sm ml-4">{{ s.description }}</div>
+          {% endif %}
+        </td>
+
+        <td class="px-4 py-2">{{ s.priority | priority_badge }}</td>
+
+        <td class="px-4 py-2">
+          <form action="{{ url_for('task_status', id=s.id) }}" method="post">
+            <select name="status" onchange="this.form.submit()"
+                    class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer
+                           {% if s.status == 'Done' %}text-green-700{% elif s.status == 'In Progress' %}text-blue-700{% else %}text-gray-600{% endif %}">
+              {% for st in ['Open','In Progress','Done'] %}
+                <option value="{{ st }}" {% if s.status == st %}selected{% endif %}>{{ st }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+
+        <td class="px-4 py-2 text-xs {% if s.due_date and s.due_date < now and s.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
+          {% if s.due_date %}
+            {{ s.due_date }}
+            {% if s.due_date < now and s.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
+          {% else %}
+            <span class="text-gray-300">—</span>
+          {% endif %}
+        </td>
+
+        <td class="px-4 py-2 text-xs">
+          {% if s.dwg_no %}
+            <a href="{{ url_for('drawing_edit', id=s.drawing_id) }}"
+               class="inline-flex items-center gap-1 text-slate-600 hover:text-blue-600">
+              <span class="font-mono bg-slate-100 px-1 py-0.5 rounded">{{ s.dwg_no }}</span>
+            </a>
+          {% endif %}
+          {% if s.doc_no %}
+            <a href="{{ url_for('document_edit', id=s.document_id) }}"
+               class="inline-flex items-center gap-1 text-slate-600 hover:text-blue-600 ml-1">
+              <span class="font-mono bg-slate-100 px-1 py-0.5 rounded">{{ s.doc_no }}</span>
+            </a>
+          {% endif %}
+          {% if not s.dwg_no and not s.doc_no %}
+            <span class="text-gray-300">—</span>
+          {% endif %}
+        </td>
+
+        <td class="px-4 py-2">
+          <div class="flex items-center gap-2">
+            <a href="{{ url_for('task_edit', id=s.id) }}"
+               class="text-xs text-gray-500 hover:text-blue-600 font-medium">Edit</a>
+            <form action="{{ url_for('task_delete', id=s.id) }}" method="post"
+                  onsubmit="return confirm('Delete this sub-task?')">
+              <button type="submit" class="text-xs text-gray-400 hover:text-red-600 font-medium">Delete</button>
+            </form>
+          </div>
+        </td>
+
+      </tr>
+      {% endfor %}
+
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-400">
+    {% set ns = namespace(sub_n=0) %}{% for t in tasks %}{% set ns.sub_n = ns.sub_n + (subtask_map.get(t.id, []) | length) %}{% endfor %}
+    {{ tasks | length }} task{% if tasks | length != 1 %}s{% endif %}{% if ns.sub_n %} · {{ ns.sub_n }} sub-task{% if ns.sub_n != 1 %}s{% endif %}{% endif %}
+    · sorted by priority then due date
+  </div>
+  {% else %}
+  <div class="py-16 text-center">
+    <div class="text-gray-300 text-4xl mb-3">☑</div>
+    <div class="text-gray-500 font-medium">No tasks found</div>
+    <div class="text-gray-400 text-xs mt-1">
+      {% if q or priority_filter or status_filter %}Adjust your filters or {% endif %}
+      <a href="{{ url_for('task_new') }}" class="text-blue-600 hover:underline">add the first task</a>.
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleSubs(parentId, btn) {
+  const rows = document.querySelectorAll('tr[data-parent="' + parentId + '"]');
+  const willOpen = btn.dataset.open === '0';
+  rows.forEach(r => r.classList.toggle('hidden', !willOpen));
+  btn.dataset.open = willOpen ? '1' : '0';
+  btn.querySelector('svg').style.transform = willOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+</script>
+
+{% endblock %}

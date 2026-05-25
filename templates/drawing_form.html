@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}{% if drawing %}Edit {{ drawing.number }}{% else %}New Drawing{% endif %}{% endblock %}
+{% block header %}{% if drawing %}Edit Drawing — {{ drawing.number }}{% else %}New Drawing{% endif %}{% endblock %}
+
+{% block header_actions %}
+  <a href="{{ url_for('drawings') }}" class="text-xs text-gray-500 hover:text-gray-700">← Back to Drawings</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-2xl">
+  <div class="bg-white rounded-lg border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-700">
+        {% if drawing %}Update drawing metadata and file{% else %}Register a new drawing{% endif %}
+      </h2>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="px-6 py-5 space-y-5">
+
+      <!-- Project -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Project</label>
+        <select name="project_id"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">— None —</option>
+          {% for p in all_projects %}
+            <option value="{{ p.id }}"
+              {% if (drawing and drawing.project_id == p.id) or (not drawing and default_project == p.id | string) %}selected{% endif %}>
+              {{ p.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Number + Revision row -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="col-span-2">
+          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Drawing Number</label>
+          {% if drawing %}
+            <input type="text" value="{{ drawing.number }}" readonly
+                   class="w-full border border-gray-200 bg-gray-50 rounded px-3 py-2 text-sm font-mono text-gray-500 cursor-not-allowed">
+          {% else %}
+            <input type="text" name="number" value="{{ auto }}"
+                   class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+                   placeholder="{{ auto }}">
+            <div class="text-xs text-gray-400 mt-1">Leave as-is for auto-assignment, or enter a custom number.</div>
+          {% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Revision</label>
+          <input type="text" name="revision"
+                 value="{{ drawing.revision if drawing else 'A' }}"
+                 maxlength="8"
+                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+                 placeholder="A">
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+          Title <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="title" required
+               value="{{ drawing.title if drawing else '' }}"
+               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+               placeholder="e.g. Assembly — Main Frame">
+      </div>
+
+      <!-- Status -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Status</label>
+        <select name="status"
+                class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          {% for s in ['In Work', 'Released', 'Obsolete'] %}
+            <option value="{{ s }}" {% if (drawing and drawing.status == s) or (not drawing and s == 'In Work') %}selected{% endif %}>
+              {{ s }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Description</label>
+        <textarea name="description" rows="3"
+                  class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
+                  placeholder="Optional notes, scope, or references…">{{ drawing.description if drawing else '' }}</textarea>
+      </div>
+
+      <!-- File upload -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">File</label>
+        {% if drawing and drawing.filename %}
+          <div class="flex items-center gap-3 mb-2 p-2 bg-blue-50 border border-blue-100 rounded text-xs text-blue-700">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+            Current file:
+            <a href="{{ url_for('drawing_file', id=drawing.id) }}"
+               class="font-medium hover:underline">{{ drawing.orig_name }}</a>
+            <span class="text-blue-400">— upload a new file below to replace it</span>
+          </div>
+        {% endif %}
+        <input type="file" name="file"
+               class="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-1.5 file:px-3 file:rounded file:border-0
+                      file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700
+                      hover:file:bg-gray-200 cursor-pointer"
+               accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs,.stl,.png,.jpg,.jpeg,.gif,.tif,.tiff,.bmp,.svg,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip">
+        <div class="text-xs text-gray-400 mt-1">PDF, DWG, DXF, STEP, images, Office docs — max 200 MB</div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3 pt-2 border-t border-gray-100">
+        <button type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded transition-colors">
+          {% if drawing %}Save Changes{% else %}Create Drawing{% endif %}
+        </button>
+        <a href="{{ url_for('drawings') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
+
+        {% if drawing %}
+          <div class="flex-1 text-right">
+            <form action="{{ url_for('drawing_delete', id=drawing.id) }}" method="post"
+                  onsubmit="return confirm('Permanently delete {{ drawing.number }}?')">
+              <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete drawing</button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+
+  {% if drawing %}
+  <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg px-5 py-3 text-xs text-gray-400 space-y-0.5">
+    <div>Created: {{ drawing.created_at }}</div>
+    <div>Last updated: {{ drawing.updated_at }}</div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

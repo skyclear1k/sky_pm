@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{% if project %}Edit Project{% else %}New Project{% endif %}{% endblock %}
+{% block header %}{% if project %}Edit Project{% else %}New Project{% endif %}{% endblock %}
+
+{% block header_actions %}
+  <a href="{{ url_for('tasks') }}" class="text-xs text-gray-500 hover:text-gray-700">← Back</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-xl">
+  <div class="bg-white rounded-lg border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-700">
+        {% if project %}Update project{% else %}Create a new project{% endif %}
+      </h2>
+    </div>
+
+    <form method="post" class="px-6 py-5 space-y-5">
+
+      <!-- Name -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+          Name <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="name" required
+               value="{{ project.name if project else '' }}"
+               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+               placeholder="e.g. aDUNE TMS">
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Description</label>
+        <textarea name="description" rows="3"
+                  class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
+                  placeholder="Short description of this project…">{{ project.description if project else '' }}</textarea>
+      </div>
+
+      <!-- Status -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Status</label>
+        <select name="status"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          {% for s in ['Active','On Hold','Completed'] %}
+            <option value="{{ s }}" {% if (project and project.status == s) or (not project and s == 'Active') %}selected{% endif %}>
+              {{ s }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3 pt-2 border-t border-gray-100">
+        <button type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded transition-colors">
+          {% if project %}Save Changes{% else %}Create Project{% endif %}
+        </button>
+        <a href="{{ url_for('tasks') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
+
+        {% if project %}
+          <div class="flex-1 text-right">
+            <form action="{{ url_for('project_delete', id=project.id) }}" method="post"
+                  onsubmit="return confirm('Delete this project? Tasks, drawings and documents will be unlinked.')">
+              <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete project</button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+
+  {% if project %}
+  <div class="mt-4 bg-gray-50 border border-gray-200 rounded-lg px-5 py-3 text-xs text-gray-400 space-y-0.5">
+    <div>Created: {{ project.created_at }}</div>
+    <div>Last updated: {{ project.updated_at }}</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

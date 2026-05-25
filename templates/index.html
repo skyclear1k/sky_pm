@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Stats row -->
+<div class="grid grid-cols-4 gap-4 mb-6">
+
+  <div class="bg-white rounded-lg border border-gray-200 px-5 py-4">
+    <div class="text-2xl font-bold text-gray-800">{{ stats.drawings }}</div>
+    <div class="text-xs text-gray-500 mt-0.5 uppercase tracking-wide font-medium">Drawings</div>
+    <a href="{{ url_for('drawings') }}" class="text-xs text-blue-600 hover:underline mt-2 inline-block">View all →</a>
+  </div>
+
+  <div class="bg-white rounded-lg border border-gray-200 px-5 py-4">
+    <div class="text-2xl font-bold text-gray-800">{{ stats.documents }}</div>
+    <div class="text-xs text-gray-500 mt-0.5 uppercase tracking-wide font-medium">Documents</div>
+    <a href="{{ url_for('documents') }}" class="text-xs text-blue-600 hover:underline mt-2 inline-block">View all →</a>
+  </div>
+
+  <div class="bg-white rounded-lg border border-gray-200 px-5 py-4">
+    <div class="text-2xl font-bold text-gray-800">{{ stats.tasks_open }}</div>
+    <div class="text-xs text-gray-500 mt-0.5 uppercase tracking-wide font-medium">Open Tasks</div>
+    <a href="{{ url_for('tasks') }}" class="text-xs text-blue-600 hover:underline mt-2 inline-block">View all →</a>
+  </div>
+
+  <div class="bg-white rounded-lg border border-gray-200 px-5 py-4">
+    <div class="text-2xl font-bold {% if stats.tasks_critical > 0 %}text-red-600{% else %}text-gray-800{% endif %}">
+      {{ stats.tasks_critical }}
+    </div>
+    <div class="text-xs text-gray-500 mt-0.5 uppercase tracking-wide font-medium">Critical Tasks</div>
+    <a href="{{ url_for('tasks', priority='Critical') }}" class="text-xs text-blue-600 hover:underline mt-2 inline-block">View →</a>
+  </div>
+
+</div>
+
+<!-- Two-column section -->
+<div class="grid grid-cols-5 gap-5">
+
+  <!-- Top priority tasks (3/5 width) -->
+  <div class="col-span-3 bg-white rounded-lg border border-gray-200">
+    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+      <span class="font-semibold text-gray-700 text-sm">Top Open Tasks</span>
+      <a href="{{ url_for('task_new') }}"
+         class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium transition-colors">
+        + New Task
+      </a>
+    </div>
+    {% if top_tasks %}
+      <ul class="divide-y divide-gray-50">
+        {% for t in top_tasks %}
+        <li class="flex items-start gap-3 px-4 py-3
+                   border-l-4
+                   {% if t.priority == 'Critical' %}border-red-500
+                   {% elif t.priority == 'High' %}border-orange-400
+                   {% elif t.priority == 'Medium' %}border-yellow-400
+                   {% else %}border-gray-200{% endif %}">
+          <div class="flex-1 min-w-0 mt-0.5">
+            <div class="font-medium text-gray-800 truncate">{{ t.title }}</div>
+            {% if t.description %}
+              <div class="text-xs text-gray-400 mt-0.5 truncate">{{ t.description }}</div>
+            {% endif %}
+            {% if t.due_date %}
+              <div class="text-xs text-gray-400 mt-1">Due {{ t.due_date }}</div>
+            {% endif %}
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+            {{ t.priority | priority_badge }}
+            <form action="{{ url_for('task_status', id=t.id) }}" method="post">
+              <input type="hidden" name="status" value="Done">
+              <button type="submit"
+                      class="text-xs text-gray-400 hover:text-green-600 border border-gray-200 hover:border-green-400 px-2 py-0.5 rounded transition-colors"
+                      title="Mark done">
+                ✓
+              </button>
+            </form>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="px-4 py-2 border-t border-gray-50">
+        <a href="{{ url_for('tasks') }}" class="text-xs text-blue-600 hover:underline">All tasks →</a>
+      </div>
+    {% else %}
+      <div class="px-4 py-10 text-center text-gray-400 text-sm">No open tasks — you're all clear.</div>
+    {% endif %}
+  </div>
+
+  <!-- Recent drawings + docs (2/5 width) -->
+  <div class="col-span-2 space-y-4">
+
+    <div class="bg-white rounded-lg border border-gray-200">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <span class="font-semibold text-gray-700 text-sm">Recent Drawings</span>
+        <a href="{{ url_for('drawing_new') }}"
+           class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium transition-colors">
+          + New
+        </a>
+      </div>
+      {% if recent_drawings %}
+        <ul class="divide-y divide-gray-50">
+          {% for d in recent_drawings %}
+          <li class="flex items-center gap-2 px-4 py-2.5">
+            <span class="font-mono text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded flex-shrink-0">{{ d.number }}</span>
+            <a href="{{ url_for('drawing_edit', id=d.id) }}"
+               class="text-sm text-gray-700 hover:text-blue-600 truncate flex-1">{{ d.title }}</a>
+            {{ d.status | status_badge }}
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="px-4 py-2 border-t border-gray-50">
+          <a href="{{ url_for('drawings') }}" class="text-xs text-blue-600 hover:underline">All drawings →</a>
+        </div>
+      {% else %}
+        <div class="px-4 py-6 text-center text-gray-400 text-xs">No drawings yet</div>
+      {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg border border-gray-200">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <span class="font-semibold text-gray-700 text-sm">Recent Documents</span>
+        <a href="{{ url_for('document_new') }}"
+           class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium transition-colors">
+          + New
+        </a>
+      </div>
+      {% if recent_docs %}
+        <ul class="divide-y divide-gray-50">
+          {% for d in recent_docs %}
+          <li class="flex items-center gap-2 px-4 py-2.5">
+            <span class="font-mono text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded flex-shrink-0">{{ d.number }}</span>
+            <a href="{{ url_for('document_edit', id=d.id) }}"
+               class="text-sm text-gray-700 hover:text-blue-600 truncate flex-1">{{ d.title }}</a>
+            {{ d.status | status_badge }}
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="px-4 py-2 border-t border-gray-50">
+          <a href="{{ url_for('documents') }}" class="text-xs text-blue-600 hover:underline">All documents →</a>
+        </div>
+      {% else %}
+        <div class="px-4 py-6 text-center text-gray-400 text-xs">No documents yet</div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}{% if task %}Edit Task{% else %}New Task{% endif %}{% endblock %}
+{% block header %}{% if task %}Edit Task{% else %}New Task{% endif %}{% endblock %}
+
+{% block header_actions %}
+  <a href="{{ url_for('tasks') }}" class="text-xs text-gray-500 hover:text-gray-700">← Back to Tasks</a>
+{% endblock %}
+
+{% block content %}
+
+{% if task %}<div class="grid grid-cols-3 gap-6 items-start">
+  <div class="col-span-1 space-y-4">
+{% else %}<div class="max-w-2xl">
+{% endif %}
+
+  <!-- Form card -->
+  <div class="bg-white rounded-lg border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-700">
+        {% if task %}Update task{% else %}Create a new task{% endif %}
+      </h2>
+    </div>
+
+    <form method="post" class="px-6 py-5 space-y-5">
+
+      <!-- Project -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Project</label>
+        <select name="project_id"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">— None —</option>
+          {% for p in all_projects %}
+            <option value="{{ p.id }}"
+              {% if (task and task.project_id == p.id) or (not task and default_project == p.id | string) %}selected{% endif %}>
+              {{ p.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Title -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+          Title <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="title" required
+               value="{{ task.title if task else '' }}"
+               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+               placeholder="e.g. Review CDR drawings for cryostat">
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Description</label>
+        <textarea name="description" rows="3"
+                  class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
+                  placeholder="Additional context, acceptance criteria, or notes…">{{ task.description if task else '' }}</textarea>
+      </div>
+
+      <!-- Priority + Status row -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Priority</label>
+          <select name="priority"
+                  class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {% for p in ['Critical','High','Medium','Low'] %}
+              <option value="{{ p }}" {% if (task and task.priority == p) or (not task and p == 'Medium') %}selected{% endif %}>
+                {{ p }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Status</label>
+          <select name="status"
+                  class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {% for s in ['Open','In Progress','Done'] %}
+              <option value="{{ s }}" {% if (task and task.status == s) or (not task and s == 'Open') %}selected{% endif %}>
+                {{ s }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Due date -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Due Date</label>
+        <input type="date" name="due_date"
+               value="{{ task.due_date if task and task.due_date else '' }}"
+               class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <span class="text-xs text-gray-400 ml-2">Optional</span>
+      </div>
+
+      <!-- Related drawing -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+          Related Drawing
+          <span class="text-gray-400 font-normal normal-case ml-1">optional</span>
+        </label>
+        <select name="drawing_id"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">— None —</option>
+          {% for d in drawings %}
+            <option value="{{ d.id }}" {% if task and task.drawing_id == d.id %}selected{% endif %}>
+              {{ d.number }} — {{ d.title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Related document -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+          Related Document
+          <span class="text-gray-400 font-normal normal-case ml-1">optional</span>
+        </label>
+        <select name="document_id"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">— None —</option>
+          {% for d in docs %}
+            <option value="{{ d.id }}" {% if task and task.document_id == d.id %}selected{% endif %}>
+              {{ d.number }} — {{ d.title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Parent Task -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+          Parent Task
+          <span class="text-gray-400 font-normal normal-case ml-1">optional — makes this a sub-task</span>
+        </label>
+        <select name="parent_id"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">— None (top-level task) —</option>
+          {% for p in parent_tasks %}
+            <option value="{{ p.id }}"
+              {% if (task and task.parent_id == p.id) or (not task and preselect_parent == p.id) %}selected{% endif %}>
+              {{ p.title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3 pt-2 border-t border-gray-100">
+        <button type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded transition-colors">
+          {% if task %}Save Changes{% else %}Create Task{% endif %}
+        </button>
+        <a href="{{ url_for('tasks') }}" class="text-sm text-gray-500 hover:text-gray-700">Cancel</a>
+
+        {% if task %}
+          <div class="flex-1 text-right">
+            <form action="{{ url_for('task_delete', id=task.id) }}" method="post"
+                  onsubmit="return confirm('Delete this task and its sub-tasks?')">
+              <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete task</button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+
+  {% if task %}
+  <!-- Timestamps -->
+  <div class="bg-gray-50 border border-gray-200 rounded-lg px-5 py-3 text-xs text-gray-400 space-y-0.5">
+    <div>Created: {{ task.created_at }}</div>
+    <div>Last updated: {{ task.updated_at }}</div>
+  </div>
+  {% endif %}
+
+{% if task %}
+  </div><!-- /col-span-1 -->
+
+  <!-- Summary dashboard (right column) -->
+  <div class="col-span-2 space-y-4">
+
+    <!-- Journal -->
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Journal</span>
+        <span class="text-xs text-gray-400">
+          {{ notes | length }} entr{% if notes | length != 1 %}ies{% else %}y{% endif %}
+        </span>
+      </div>
+
+      {% if notes %}
+      <ul class="divide-y divide-gray-100">
+        {% for n in notes %}
+        <li class="px-4 py-3">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="text-xs text-gray-400 mb-1">{{ n.created_at }}</div>
+              <!-- Display mode -->
+              <div id="note-body-{{ n.id }}" class="text-sm text-gray-700 whitespace-pre-wrap">{{ n.body }}</div>
+              <!-- Edit mode (hidden by default) -->
+              <form id="note-edit-form-{{ n.id }}" class="hidden mt-1"
+                    action="{{ url_for('task_note_edit', id=task.id, note_id=n.id) }}" method="post">
+                <textarea name="body" rows="3"
+                          class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y">{{ n.body }}</textarea>
+                <div class="flex gap-2 mt-1">
+                  <button type="submit"
+                          class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors">
+                    Save
+                  </button>
+                  <button type="button" onclick="cancelNoteEdit({{ n.id }})"
+                          class="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                </div>
+              </form>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button type="button" id="note-edit-btn-{{ n.id }}" onclick="startNoteEdit({{ n.id }})"
+                      class="text-xs text-gray-400 hover:text-blue-600 font-medium">Edit</button>
+              <form action="{{ url_for('task_note_delete', id=task.id, note_id=n.id) }}" method="post"
+                    onsubmit="return confirm('Delete this note?')">
+                <button type="submit" class="text-gray-300 hover:text-red-500 transition-colors text-sm leading-none"
+                        title="Delete note">✕</button>
+              </form>
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="px-4 py-4 text-sm text-gray-400 italic">No journal entries yet.</div>
+      {% endif %}
+
+      <!-- Add note -->
+      <div class="px-4 py-3 border-t border-gray-100 bg-gray-50">
+        <form action="{{ url_for('task_note_add', id=task.id) }}" method="post" class="space-y-2">
+          <textarea name="body" rows="3" required
+                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
+                    placeholder="Add a meeting note…"></textarea>
+          <button type="submit"
+                  class="bg-gray-700 hover:bg-gray-800 text-white text-xs font-medium px-4 py-1.5 rounded transition-colors">
+            Add Note
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Drawing summary -->
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Related Drawing</span>
+      </div>
+      {% if drawing %}
+      <div class="px-4 py-4 space-y-2">
+        <div>
+          <span class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">{{ drawing.number }}</span>
+        </div>
+        <div class="font-medium text-sm text-gray-800">{{ drawing.title }}</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-gray-500">Rev {{ drawing.revision }}</span>
+          {{ drawing.status | status_badge }}
+        </div>
+        {% if drawing.filename %}
+        <a href="{{ url_for('drawing_file', id=drawing.id) }}"
+           class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+          ↓ {{ drawing.orig_name }}
+        </a>
+        {% endif %}
+        <div class="pt-2 border-t border-gray-100">
+          <a href="{{ url_for('drawing_edit', id=drawing.id) }}"
+             class="text-xs text-gray-400 hover:text-blue-600">Open drawing →</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="px-4 py-4 text-xs text-gray-400 italic">No drawing linked.</div>
+      {% endif %}
+    </div>
+
+    <!-- Document summary -->
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Related Document</span>
+      </div>
+      {% if document %}
+      <div class="px-4 py-4 space-y-2">
+        <div>
+          <span class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">{{ document.number }}</span>
+        </div>
+        <div class="font-medium text-sm text-gray-800">{{ document.title }}</div>
+        <div class="text-xs text-gray-500">{{ document.doc_type }}</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-gray-500">Rev {{ document.revision }}</span>
+          {{ document.status | status_badge }}
+        </div>
+        {% if document.filename %}
+        <a href="{{ url_for('document_file', id=document.id) }}"
+           class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+          ↓ {{ document.orig_name }}
+        </a>
+        {% endif %}
+        <div class="pt-2 border-t border-gray-100">
+          <a href="{{ url_for('document_edit', id=document.id) }}"
+             class="text-xs text-gray-400 hover:text-blue-600">Open document →</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="px-4 py-4 text-xs text-gray-400 italic">No document linked.</div>
+      {% endif %}
+    </div>
+
+  </div><!-- /summary dashboard -->
+</div><!-- /grid -->
+{% else %}</div><!-- /max-w-2xl -->
+{% endif %}
+
+<script>
+function startNoteEdit(id) {
+  document.getElementById('note-body-' + id).classList.add('hidden');
+  document.getElementById('note-edit-form-' + id).classList.remove('hidden');
+  document.getElementById('note-edit-btn-' + id).classList.add('hidden');
+}
+function cancelNoteEdit(id) {
+  document.getElementById('note-body-' + id).classList.remove('hidden');
+  document.getElementById('note-edit-form-' + id).classList.add('hidden');
+  document.getElementById('note-edit-btn-' + id).classList.remove('hidden');
+}
+</script>
+
+{% endblock %}
