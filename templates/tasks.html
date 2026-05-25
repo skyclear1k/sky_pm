@@ -18,8 +18,14 @@
          class="border border-gray-300 rounded px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-400">
   <select name="priority" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
     <option value="">All priorities</option>
-    {% for p in ['Critical','High','Medium','Low'] %}
-      <option value="{{ p }}" {% if priority_filter == p %}selected{% endif %}>{{ p }}</option>
+    {% for level in ['Critical','High','Medium','Low'] %}
+      <optgroup label="{{ level }}">
+        <option value="{{ level }}" {% if priority_filter == level %}selected{% endif %}>All {{ level }}</option>
+        {% for n in ['T1','T2','T3'] %}
+          {% set p = level ~ ' ' ~ n %}
+          <option value="{{ p }}" {% if priority_filter == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </optgroup>
     {% endfor %}
   </select>
   <select name="status" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -43,7 +49,7 @@
       Open
     </a>
     <a href="{{ url_for('tasks', priority='Critical') }}"
-       class="text-xs px-2 py-1 rounded border {% if priority_filter == 'Critical' %}bg-red-600 text-white border-red-600{% else %}border-red-200 text-red-600 hover:bg-red-50{% endif %}">
+       class="text-xs px-2 py-1 rounded border {% if 'Critical' in priority_filter %}bg-red-600 text-white border-red-600{% else %}border-red-200 text-red-600 hover:bg-red-50{% endif %}">
       Critical
     </a>
     <a href="{{ url_for('tasks', status='Done') }}"
@@ -73,9 +79,9 @@
       <tr class="hover:bg-gray-50 transition-colors
                  border-l-4
                  {% if t.status == 'Done' %}opacity-60 border-gray-100
-                 {% elif t.priority == 'Critical' %}border-red-500
-                 {% elif t.priority == 'High' %}border-orange-400
-                 {% elif t.priority == 'Medium' %}border-yellow-400
+                 {% elif 'Critical' in t.priority %}border-red-500
+                 {% elif 'High' in t.priority %}border-orange-400
+                 {% elif 'Medium' in t.priority %}border-yellow-400
                  {% else %}border-gray-200{% endif %}">
 
         <!-- Done checkbox -->
@@ -188,9 +194,9 @@
       <tr data-parent="{{ t.id }}"
           class="hidden hover:bg-slate-50 transition-colors border-l-4
                  {% if s.status == 'Done' %}opacity-50 border-gray-100
-                 {% elif s.priority == 'Critical' %}border-red-300
-                 {% elif s.priority == 'High' %}border-orange-300
-                 {% elif s.priority == 'Medium' %}border-yellow-300
+                 {% elif 'Critical' in s.priority %}border-red-300
+                 {% elif 'High' in s.priority %}border-orange-300
+                 {% elif 'Medium' in s.priority %}border-yellow-300
                  {% else %}border-gray-200{% endif %}
                  bg-gray-50">
 

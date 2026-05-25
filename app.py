@@ -150,6 +150,20 @@ def inject_globals():
 # ── Template filters (badges) ─────────────────────────────────────────────────
 
 PRIORITY_COLORS = {
+    # Tiered priorities
+    'Critical T1': 'bg-red-200 text-red-900 border border-red-400',
+    'Critical T2': 'bg-red-100 text-red-700 border border-red-200',
+    'Critical T3': 'bg-red-50 text-red-600 border border-red-100',
+    'High T1':     'bg-orange-200 text-orange-900 border border-orange-400',
+    'High T2':     'bg-orange-100 text-orange-700 border border-orange-200',
+    'High T3':     'bg-orange-50 text-orange-600 border border-orange-100',
+    'Medium T1':   'bg-yellow-200 text-yellow-900 border border-yellow-400',
+    'Medium T2':   'bg-yellow-100 text-yellow-700 border border-yellow-200',
+    'Medium T3':   'bg-yellow-50 text-yellow-600 border border-yellow-100',
+    'Low T1':      'bg-gray-200 text-gray-700 border border-gray-400',
+    'Low T2':      'bg-gray-100 text-gray-500 border border-gray-200',
+    'Low T3':      'bg-gray-50 text-gray-400 border border-gray-100',
+    # Legacy (no tier) — kept for backward compatibility
     'Critical': 'bg-red-100 text-red-700 border border-red-200',
     'High':     'bg-orange-100 text-orange-700 border border-orange-200',
     'Medium':   'bg-yellow-100 text-yellow-700 border border-yellow-200',
@@ -607,8 +621,18 @@ def document_file(id):
 
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
-PRI_SORT = ("CASE priority WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 "
-            "WHEN 'Medium' THEN 3 ELSE 4 END")
+PRI_SORT = (
+    "CASE priority "
+    "WHEN 'Critical T1' THEN 1 WHEN 'Critical T2' THEN 2 WHEN 'Critical T3' THEN 3 "
+    "WHEN 'Critical' THEN 2 "
+    "WHEN 'High T1' THEN 4 WHEN 'High T2' THEN 5 WHEN 'High T3' THEN 6 "
+    "WHEN 'High' THEN 5 "
+    "WHEN 'Medium T1' THEN 7 WHEN 'Medium T2' THEN 8 WHEN 'Medium T3' THEN 9 "
+    "WHEN 'Medium' THEN 8 "
+    "WHEN 'Low T1' THEN 10 WHEN 'Low T2' THEN 11 WHEN 'Low T3' THEN 12 "
+    "WHEN 'Low' THEN 11 "
+    "ELSE 13 END"
+)
 
 
 @app.route('/tasks')
@@ -633,7 +657,10 @@ def tasks():
         where.append("(t.title LIKE ? OR t.description LIKE ?)")
         params += [f'%{q}%'] * 2
     if pf:
-        where.append("t.priority=?"); params.append(pf)
+        if pf in ('Critical', 'High', 'Medium', 'Low'):
+            where.append("t.priority LIKE ?"); params.append(f'{pf}%')
+        else:
+            where.append("t.priority=?"); params.append(pf)
     if sf:
         where.append("t.status=?"); params.append(sf)
     if where:
@@ -671,7 +698,7 @@ def task_new():
                 "VALUES(?,?,?,?,?,?,?,?,?)",
                 (request.form.get('project_id') or None,
                  title, request.form.get('description', ''),
-                 request.form.get('priority', 'Medium'),
+                 request.form.get('priority', 'Medium T2'),
                  request.form.get('status', 'Open'),
                  request.form.get('due_date') or None,
                  request.form.get('drawing_id') or None,
