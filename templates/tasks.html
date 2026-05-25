@@ -69,7 +69,8 @@
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Title</th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Priority</th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Status</th>
-        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Due</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Start</th>
+        <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-24">Finish</th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-36">Related</th>
         <th class="px-4 py-2.5 font-semibold text-gray-600 text-xs uppercase tracking-wide w-32">Actions</th>
       </tr>
@@ -145,11 +146,16 @@
           </form>
         </td>
 
-        <!-- Due date -->
-        <td class="px-4 py-3 text-xs {% if t.due_date and t.due_date < now and t.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
-          {% if t.due_date %}
-            {{ t.due_date }}
-            {% if t.due_date < now and t.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
+        <!-- Start date -->
+        <td class="px-4 py-3 text-xs text-gray-500">
+          {% if t.start_date %}{{ t.start_date }}{% else %}<span class="text-gray-300">—</span>{% endif %}
+        </td>
+
+        <!-- Finish date -->
+        <td class="px-4 py-3 text-xs {% if t.finish_date and t.finish_date < now and t.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
+          {% if t.finish_date %}
+            {{ t.finish_date }}
+            {% if t.finish_date < now and t.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
           {% else %}
             <span class="text-gray-300">—</span>
           {% endif %}
@@ -244,10 +250,16 @@
           </form>
         </td>
 
-        <td class="px-4 py-2 text-xs {% if s.due_date and s.due_date < now and s.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
-          {% if s.due_date %}
-            {{ s.due_date }}
-            {% if s.due_date < now and s.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
+        <!-- Start date (subtask) -->
+        <td class="px-4 py-2 text-xs text-gray-500">
+          {% if s.start_date %}{{ s.start_date }}{% else %}<span class="text-gray-300">—</span>{% endif %}
+        </td>
+
+        <!-- Finish date (subtask) -->
+        <td class="px-4 py-2 text-xs {% if s.finish_date and s.finish_date < now and s.status != 'Done' %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
+          {% if s.finish_date %}
+            {{ s.finish_date }}
+            {% if s.finish_date < now and s.status != 'Done' %}<span title="Overdue">⚠</span>{% endif %}
           {% else %}
             <span class="text-gray-300">—</span>
           {% endif %}

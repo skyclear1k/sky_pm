@@ -88,13 +88,22 @@
         </div>
       </div>
 
-      <!-- Due date -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Due Date</label>
-        <input type="date" name="due_date"
-               value="{{ task.due_date if task and task.due_date else '' }}"
-               class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-        <span class="text-xs text-gray-400 ml-2">Optional</span>
+      <!-- Start / Finish dates -->
+      <div class="flex gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Start Date</label>
+          <input type="date" name="start_date"
+                 value="{{ task.start_date if task and task.start_date else '' }}"
+                 class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <span class="text-xs text-gray-400 ml-2">Optional</span>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Finish Date</label>
+          <input type="date" name="finish_date"
+                 value="{{ task.finish_date if task and task.finish_date else '' }}"
+                 class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <span class="text-xs text-gray-400 ml-2">Optional</span>
+        </div>
       </div>
 
       <!-- Related drawing -->

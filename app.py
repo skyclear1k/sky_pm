@@ -74,7 +74,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     description TEXT DEFAULT '',
     priority    TEXT NOT NULL DEFAULT 'Medium',
     status      TEXT NOT NULL DEFAULT 'Open',
-    due_date    TEXT,
+    start_date  TEXT,
+    finish_date TEXT,
     parent_id   INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
     drawing_id  INTEGER REFERENCES drawings(id) ON DELETE SET NULL,
     document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL,
@@ -100,10 +101,17 @@ def init_db():
         ('drawings',  'project_id', 'INTEGER REFERENCES projects(id) ON DELETE SET NULL'),
         ('documents', 'project_id', 'INTEGER REFERENCES projects(id) ON DELETE SET NULL'),
         ('tasks',     'project_id', 'INTEGER REFERENCES projects(id) ON DELETE SET NULL'),
+        ('tasks',     'start_date', 'TEXT'),
     ]:
         cols = [r[1] for r in conn.execute(f"PRAGMA table_info({tbl})").fetchall()]
         if col not in cols:
             conn.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {typedef}")
+    # Rename due_date -> finish_date for existing databases
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+    if 'due_date' in cols and 'finish_date' not in cols:
+        conn.execute("ALTER TABLE tasks RENAME COLUMN due_date TO finish_date")
+    elif 'finish_date' not in cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN finish_date TEXT")
     # Seed a default project for any pre-existing records with no project_id
     orphans = any(
         conn.execute(f"SELECT 1 FROM {t} WHERE project_id IS NULL LIMIT 1").fetchone()
@@ -665,7 +673,7 @@ def tasks():
         where.append("t.status=?"); params.append(sf)
     if where:
         sql += " AND " + " AND ".join(where)
-    sql += f" ORDER BY {PRI_SORT}, CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END, t.due_date, t.id"
+    sql += f" ORDER BY {PRI_SORT}, CASE WHEN t.finish_date IS NULL THEN 1 ELSE 0 END, t.finish_date, t.id"
     rows = db.execute(sql, params).fetchall()
 
     sub_rows = db.execute(
@@ -674,7 +682,7 @@ def tasks():
         "LEFT JOIN drawings d ON t.drawing_id=d.id "
         "LEFT JOIN documents doc ON t.document_id=doc.id "
         f"WHERE t.parent_id IS NOT NULL "
-        f"ORDER BY {PRI_SORT}, CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END, t.due_date, t.id"
+        f"ORDER BY {PRI_SORT}, CASE WHEN t.finish_date IS NULL THEN 1 ELSE 0 END, t.finish_date, t.id"
     ).fetchall()
     from collections import defaultdict
     subtask_map = defaultdict(list)
@@ -694,13 +702,14 @@ def task_new():
             flash('Title is required.', 'error')
         else:
             db.execute(
-                "INSERT INTO tasks(project_id,title,description,priority,status,due_date,drawing_id,document_id,parent_id) "
-                "VALUES(?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO tasks(project_id,title,description,priority,status,start_date,finish_date,drawing_id,document_id,parent_id) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?)",
                 (request.form.get('project_id') or None,
                  title, request.form.get('description', ''),
                  request.form.get('priority', 'Medium T2'),
                  request.form.get('status', 'Open'),
-                 request.form.get('due_date') or None,
+                 request.form.get('start_date') or None,
+                 request.form.get('finish_date') or None,
                  request.form.get('drawing_id') or None,
                  request.form.get('document_id') or None,
                  request.form.get('parent_id') or None)
@@ -738,12 +747,13 @@ def task_edit(id):
             flash('Title is required.', 'error')
         else:
             db.execute(
-                "UPDATE tasks SET project_id=?,title=?,description=?,priority=?,status=?,due_date=?,"
+                "UPDATE tasks SET project_id=?,title=?,description=?,priority=?,status=?,start_date=?,finish_date=?,"
                 "drawing_id=?,document_id=?,parent_id=?,updated_at=datetime('now','localtime') WHERE id=?",
                 (request.form.get('project_id') or None,
                  title, request.form.get('description'),
                  request.form.get('priority'), request.form.get('status'),
-                 request.form.get('due_date') or None,
+                 request.form.get('start_date') or None,
+                 request.form.get('finish_date') or None,
                  request.form.get('drawing_id') or None,
                  request.form.get('document_id') or None,
                  request.form.get('parent_id') or None, id)
