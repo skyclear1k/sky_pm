@@ -131,20 +131,24 @@
     },
   });
 
-  // Scroll so the earliest task bar is at the left edge of the viewport.
-  // Uses setTimeout(0) so our callback is queued AFTER frappe-gantt's own
-  // internal setTimeout(scroll_to_today, 0), which would otherwise override us.
+  // Frappe Gantt always snaps gantt_start to the 1st of the month and may
+  // scroll to today internally.  We override by computing the exact pixel
+  // offset of the earliest task from gantt_start using the library's own
+  // internal state (gantt.gantt_start, gantt.options.step / column_width).
+  // The setTimeout(0) queues us after any deferred scroll frappe-gantt posts.
   function scrollToEarliest() {
     setTimeout(function () {
       const container = document.getElementById('gantt');
-      const bars = container.querySelectorAll('.bar-wrapper');
-      let minX = Infinity;
-      bars.forEach(function (bar) {
-        const m = (bar.getAttribute('transform') || '').match(/translate\(([^,)]+)/);
-        if (m) minX = Math.min(minX, parseFloat(m[1]));
-      });
-      // Subtract one column-width of padding so the bar isn't flush against the edge.
-      container.scrollLeft = isFinite(minX) ? Math.max(0, minX - 40) : 0;
+      const gs = gantt.gantt_start;          // Date: 1st of month of earliest task
+      const step = gantt.options.step;       // hours per SVG column unit
+      const cw   = gantt.options.column_width; // pixels per SVG column unit
+      if (!gs || !step || !cw || !tasks.length) { container.scrollLeft = 0; return; }
+      // Pixel offset of earliest task's start date within the SVG
+      const first   = new Date(tasks[0].start + 'T00:00:00');
+      const diffH   = (first - gs) / 3600000;   // hours between gantt_start and first task
+      const px      = diffH / step * cw;         // pixel position of first task bar
+      // Leave ~half a column of context to the left of the first bar
+      container.scrollLeft = Math.max(0, px - cw * 0.5);
     }, 0);
   }
 
