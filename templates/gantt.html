@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Gantt{% endblock %}
+{% block header %}{% if project_filter %}{{ project_filter }} — {% endif %}Gantt Chart{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+  <span class="text-xs text-gray-400 mr-1">View:</span>
+  <button onclick="setMode('Day')"   id="btn-Day"   class="view-btn text-xs px-2.5 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors">Day</button>
+  <button onclick="setMode('Week')"  id="btn-Week"  class="view-btn text-xs px-2.5 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors active-view">Week</button>
+  <button onclick="setMode('Month')" id="btn-Month" class="view-btn text-xs px-2.5 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors">Month</button>
+</div>
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+<style>
+  /* bar colours by priority / status */
+  .bar-critical .bar { fill: #ef4444; }
+  .bar-high     .bar { fill: #f97316; }
+  .bar-medium   .bar { fill: #3b82f6; }
+  .bar-low      .bar { fill: #94a3b8; }
+  .bar-done     .bar { fill: #22c55e; opacity: 0.75; }
+
+  /* progress fill inherits lighter shade */
+  .bar-critical .bar-progress { fill: #dc2626; }
+  .bar-high     .bar-progress { fill: #ea580c; }
+  .bar-medium   .bar-progress { fill: #2563eb; }
+  .bar-low      .bar-progress { fill: #64748b; }
+  .bar-done     .bar-progress { fill: #16a34a; opacity: 0.75; }
+
+  .gantt .grid-header { fill: #f8fafc; }
+  .gantt .grid-row:nth-child(even) { fill: #f1f5f9; }
+  .gantt-container { overflow-x: auto; }
+  .active-view { background: #1e293b; color: #fff; border-color: #1e293b; }
+</style>
+
+{% if not tasks %}
+<div class="bg-white rounded-lg border border-gray-200 p-16 text-center text-gray-400">
+  No tasks found{% if project_filter %} for <strong>{{ project_filter }}</strong>{% endif %}.
+</div>
+
+{% elif undated == tasks | length %}
+<div class="bg-white rounded-lg border border-gray-200 p-16 text-center">
+  <div class="text-gray-500 font-medium">No tasks have dates set yet.</div>
+  <div class="text-xs text-gray-400 mt-1">Add start or finish dates to tasks to display them here.</div>
+</div>
+
+{% else %}
+
+{% if undated > 0 %}
+<div class="mb-3 flex items-center gap-1.5 text-xs text-gray-400">
+  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+  </svg>
+  {{ undated }} task{{ 's' if undated != 1 else '' }} without dates not shown.
+</div>
+{% endif %}
+
+<!-- Legend -->
+<div class="flex items-center gap-4 mb-3 text-xs text-gray-500">
+  <span class="font-medium text-gray-600">Priority:</span>
+  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#ef4444"></span>Critical</span>
+  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#f97316"></span>High</span>
+  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#3b82f6"></span>Medium</span>
+  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#94a3b8"></span>Low</span>
+  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#22c55e"></span>Done</span>
+  <span class="ml-4 text-gray-400 italic">Click a bar to edit · Drag to reschedule</span>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 p-4">
+  <div class="gantt-container">
+    <div id="gantt"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+<script>
+(function () {
+  const raw = {{ tasks | tojson }};
+
+  const datedIds = new Set(
+    raw.filter(t => t.start_date || t.finish_date).map(t => String(t.id))
+  );
+
+  function priorityClass(t) {
+    if (t.status === 'Done') return 'done';
+    const p = (t.priority || '').toLowerCase();
+    if (p.startsWith('critical')) return 'critical';
+    if (p.startsWith('high'))     return 'high';
+    if (p.startsWith('medium'))   return 'medium';
+    return 'low';
+  }
+
+  function toDateStr(d) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  const tasks = raw
+    .filter(t => t.start_date || t.finish_date)
+    .map(t => ({
+      id:           String(t.id),
+      name:         t.title,
+      start:        t.start_date  || t.finish_date,
+      end:          t.finish_date || t.start_date,
+      progress:     t.status === 'Done' ? 100 : t.status === 'In Progress' ? 50 : 0,
+      dependencies: (t.parent_id && datedIds.has(String(t.parent_id))) ? String(t.parent_id) : '',
+      custom_class: 'bar-' + priorityClass(t),
+      _edit_url:    '/tasks/' + t.id + '/edit',
+    }));
+
+  if (!tasks.length) return;
+
+  const gantt = new Gantt('#gantt', tasks, {
+    view_mode:   'Week',
+    date_format: 'YYYY-MM-DD',
+    on_click: function (task) {
+      window.location.href = task._edit_url;
+    },
+    on_date_change: function (task, start, end) {
+      fetch('/tasks/' + task.id + '/dates', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_date:  toDateStr(start),
+          finish_date: toDateStr(end),
+        }),
+      });
+    },
+  });
+
+  // Frappe Gantt scrolls to today after render; override to show the earliest task.
+  document.getElementById('gantt').scrollLeft = 0;
+
+  window.setMode = function (mode) {
+    gantt.change_view_mode(mode);
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active-view'));
+    document.getElementById('btn-' + mode).classList.add('active-view');
+    // Re-anchor to earliest task whenever view changes.
+    document.getElementById('gantt').scrollLeft = 0;
+  };
+})();
+</script>
+
+{% endif %}
+{% endblock %}

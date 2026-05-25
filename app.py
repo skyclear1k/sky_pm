@@ -827,5 +827,38 @@ def task_note_delete(id, note_id):
     return redirect(url_for('task_edit', id=id))
 
 
+# ── Gantt ─────────────────────────────────────────────────────────────────────
+
+@app.route('/gantt')
+def gantt():
+    db = get_db()
+    pj_name = request.args.get('project_name', '')
+    sql = ("SELECT t.id, t.title, t.start_date, t.finish_date, t.status, t.priority, t.parent_id "
+           "FROM tasks t WHERE 1=1")
+    params = []
+    if pj_name:
+        pj_row = db.execute("SELECT id FROM projects WHERE name=?", (pj_name,)).fetchone()
+        if pj_row:
+            sql += " AND t.project_id=?"
+            params.append(pj_row[0])
+    sql += " ORDER BY t.start_date, t.finish_date, t.id"
+    rows = db.execute(sql, params).fetchall()
+    tasks = [dict(r) for r in rows]
+    undated = sum(1 for t in tasks if not t['start_date'] and not t['finish_date'])
+    return render_template('gantt.html', tasks=tasks, project_filter=pj_name, undated=undated)
+
+
+@app.route('/tasks/<int:id>/dates', methods=['POST'])
+def task_dates(id):
+    data = request.get_json(force=True)
+    db = get_db()
+    db.execute(
+        "UPDATE tasks SET start_date=?, finish_date=?, updated_at=datetime('now','localtime') WHERE id=?",
+        (data.get('start_date') or None, data.get('finish_date') or None, id)
+    )
+    db.commit()
+    return {'ok': True}
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host='127.0.0.1')
