@@ -184,7 +184,7 @@ STATUS_COLORS = {
 @app.template_filter('priority_badge')
 def priority_badge(p):
     cls = PRIORITY_COLORS.get(p, 'bg-gray-100 text-gray-500')
-    return Markup(f'<span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded {cls}">{p}</span>')
+    return Markup(f'<span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap {cls}">{p}</span>')
 
 
 @app.template_filter('status_badge')
