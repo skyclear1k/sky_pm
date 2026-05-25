@@ -131,15 +131,30 @@
     },
   });
 
-  // Frappe Gantt scrolls to today after render; override to show the earliest task.
-  document.getElementById('gantt').scrollLeft = 0;
+  // Scroll so the earliest task bar is at the left edge of the viewport.
+  // Uses setTimeout(0) so our callback is queued AFTER frappe-gantt's own
+  // internal setTimeout(scroll_to_today, 0), which would otherwise override us.
+  function scrollToEarliest() {
+    setTimeout(function () {
+      const container = document.getElementById('gantt');
+      const bars = container.querySelectorAll('.bar-wrapper');
+      let minX = Infinity;
+      bars.forEach(function (bar) {
+        const m = (bar.getAttribute('transform') || '').match(/translate\(([^,)]+)/);
+        if (m) minX = Math.min(minX, parseFloat(m[1]));
+      });
+      // Subtract one column-width of padding so the bar isn't flush against the edge.
+      container.scrollLeft = isFinite(minX) ? Math.max(0, minX - 40) : 0;
+    }, 0);
+  }
+
+  scrollToEarliest();
 
   window.setMode = function (mode) {
     gantt.change_view_mode(mode);
     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active-view'));
     document.getElementById('btn-' + mode).classList.add('active-view');
-    // Re-anchor to earliest task whenever view changes.
-    document.getElementById('gantt').scrollLeft = 0;
+    scrollToEarliest();
   };
 })();
 </script>
